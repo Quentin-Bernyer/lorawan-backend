@@ -10,29 +10,28 @@ app.use(bodyParser.json());
 
 let latestData = null;
 
-function decodePayload(payloadRaw) {
-  // Convertir le payload base64 en buffer
-  const buffer = Buffer.from(payloadRaw, 'base64');
+// ✅ Fonction de décodage des données base64
+function decodePayload(payloadBase64) {
+  const buffer = Buffer.from(payloadBase64, 'base64');
 
-  // Supposons que : [0] = température, [1-2] = tension (en mV, 2 octets)
   const temperature = buffer.readInt8(0);
   const voltage = buffer.readUInt16BE(1) / 1000.0;
 
   return { temperature, voltage };
 }
 
-// 🔍 Route appelée par Loriot
+// ✅ Route appelée par Loriot
 app.post('/api/uplink', (req, res) => {
   console.log("Corps reçu de Loriot :", JSON.stringify(req.body, null, 2));
 
   try {
-    const { payload_raw } = req.body;
+    const payload = req.body.data;
 
-    if (!payload_raw) {
-      return res.status(400).json({ error: "Pas de payload reçue" });
+    if (!payload) {
+      return res.status(400).json({ error: "Pas de payload reçue (champ 'data' manquant)" });
     }
 
-    const data = decodePayload(payload_raw);
+    const data = decodePayload(payload);
 
     latestData = {
       ...data,
@@ -47,7 +46,7 @@ app.post('/api/uplink', (req, res) => {
   }
 });
 
-// 🔍 Pour Wix ou autres clients
+// ✅ Endpoint pour récupérer la dernière donnée (appelable depuis Wix)
 app.get('/api/latest', (req, res) => {
   if (!latestData) {
     return res.status(404).json({ error: "Aucune donnée reçue pour le moment." });
@@ -55,6 +54,7 @@ app.get('/api/latest', (req, res) => {
   res.json(latestData);
 });
 
+// ✅ Démarrage du serveur
 app.listen(PORT, () => {
   console.log(`Serveur démarré sur http://localhost:${PORT}`);
 });
